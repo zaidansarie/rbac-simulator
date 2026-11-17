@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Permissions Matrix - RBAC Simulator{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header Section -->
+    <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md">
+        <h1 class="text-xl font-black text-white flex items-center">
+            <i class="fa-solid fa-table-cells text-purple-400 mr-2.5"></i>
+            Ground-Truth RBAC Permissions Matrix
+        </h1>
+        <p class="text-xs text-slate-400 mt-1 max-w-3xl">
+            In Role-Based Access Control, permissions are assigned to roles rather than directly to users. 
+            Below is the formal access matrix governing this simulator, explicitly enforcing the <strong>Principle of Least Privilege</strong>.
+        </p>
+    </div>
+
+    <!-- Official Matrix Table -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
+        <div class="px-5 py-3.5 bg-slate-900 border-b border-slate-700 flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                Access Control Policy Matrix (Roles &times; Privileges)
+            </span>
+            <span class="text-[11px] text-slate-400 font-mono">
+                PBL Activity 4 Standard Policy
+            </span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="bg-slate-900/60 text-slate-400 uppercase text-[11px] border-b border-slate-700">
+                        <th class="py-3 px-5">CRUD Operation / Permission</th>
+                        <th class="py-3 px-5 text-center w-36">
+                            <span class="text-red-400 font-bold"><i class="fa-solid fa-crown mr-1"></i> Admin</span>
+                        </th>
+                        <th class="py-3 px-5 text-center w-36">
+                            <span class="text-amber-300 font-bold"><i class="fa-solid fa-chalkboard-user mr-1"></i> Teacher</span>
+                        </th>
+                        <th class="py-3 px-5 text-center w-36">
+                            <span class="text-emerald-300 font-bold"><i class="fa-solid fa-user-graduate mr-1"></i> Student</span>
+                        </th>
+                        <th class="py-3 px-5">Least Privilege Rationale</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-700/60 font-sans">
+                    {% for action in matrix_data.actions %}
+                    <tr class="hover:bg-slate-750 transition">
+                        <td class="py-3.5 px-5">
+                            <div class="font-bold text-white">{{ action.label }}</div>
+                            <div class="font-mono text-[10px] text-slate-400">{{ action.permission }}</div>
+                        </td>
+                        <!-- Admin Cell -->
+                        <td class="py-3.5 px-5 text-center">
+                            {% if matrix_data.matrix['Admin'][action.permission] %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                <i class="fa-solid fa-check mr-1"></i> ALLOW
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-950 text-red-300 border border-red-800">
+                                <i class="fa-solid fa-xmark mr-1"></i> DENY
+                            </span>
+                            {% endif %}
+                        </td>
+                        <!-- Teacher Cell -->
+                        <td class="py-3.5 px-5 text-center">
+                            {% if matrix_data.matrix['Teacher'][action.permission] %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                <i class="fa-solid fa-check mr-1"></i> ALLOW
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-950 text-red-300 border border-red-800">
+                                <i class="fa-solid fa-xmark mr-1"></i> DENY
+                            </span>
+                            {% endif %}
+                        </td>
+                        <!-- Student Cell -->
+                        <td class="py-3.5 px-5 text-center">
+                            {% if matrix_data.matrix['Student'][action.permission] %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                <i class="fa-solid fa-check mr-1"></i> ALLOW
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-950 text-red-300 border border-red-800">
+                                <i class="fa-solid fa-xmark mr-1"></i> DENY
+                            </span>
+                            {% endif %}
+                        </td>
+                        <!-- Rationale -->
+                        <td class="py-3.5 px-5 text-slate-400 text-[11px]">
+                            {% if action.permission == 'record:view' %}
+                            All roles require read access to inspect grades and course details.
+                            {% elif action.permission == 'record:add' %}
+                            Teachers & Admin can create student records; Students cannot generate false records.
+                            {% elif action.permission == 'record:edit' %}
+                            Instructors enter grades and attendance; Students are barred from tampering with scores.
+                            {% elif action.permission == 'record:delete' %}
+                            Critical operation reserved exclusively for Administrators to prevent permanent data loss.
+                            {% elif action.permission == 'audit:view' %}
+                            Security logs contain sensitive forensic audit trails, viewable only by System Administrators.
+                            {% elif action.permission == 'user:manage' %}
+                            User account provisioning and credential resets are strictly administrative functions.
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Interactive Policy Decision Point (PDP) Evaluator -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 shadow-lg">
+        <h2 class="text-base font-bold text-white flex items-center mb-1">
+            <i class="fa-solid fa-microchip text-indigo-400 mr-2"></i>
+            Interactive Policy Decision Point (PDP) Sandbox
+        </h2>
+        <p class="text-xs text-slate-400 mb-4">
+            Select an arbitrary Role and Action to observe real-time mathematical authorization evaluation.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-slate-300 text-xs font-semibold mb-1">Subject Role</label>
+                <select id="pdp-role" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+                    <option value="Admin">Admin</option>
+                    <option value="Teacher">Teacher</option>
+                    <option value="Student" selected>Student</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-slate-300 text-xs font-semibold mb-1">Requested Action</label>
+                <select id="pdp-action" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white font-mono">
+                    <option value="record:view">record:view (View Record)</option>
+                    <option value="record:add">record:add (Add Record)</option>
+                    <option value="record:edit">record:edit (Edit Record)</option>
+                    <option value="record:delete" selected>record:delete (Delete Record)</option>
+                    <option value="audit:view">audit:view (View Audit Logs)</option>
+                    <option value="user:manage">user:manage (Manage Users)</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button onclick="evaluatePDPDecision()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2.5 px-4 rounded-lg shadow transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>Evaluate PDP Decision</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Evaluation Result Card -->
+        <div id="pdp-result-container" class="mt-4 hidden p-4 rounded-lg border transition">
+            <div class="flex items-center space-x-3">
+                <div id="pdp-result-icon" class="text-2xl"></div>
+                <div>
+                    <div id="pdp-result-title" class="text-sm font-bold"></div>
+                    <div id="pdp-result-detail" class="text-xs text-slate-300 mt-0.5"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

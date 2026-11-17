@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Security Audit Logs - RBAC Simulator{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header Section -->
+    <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-xl font-black text-white flex items-center">
+                <i class="fa-solid fa-clock-rotate-left text-amber-400 mr-2.5"></i>
+                Security Authorization Audit Ledger
+            </h1>
+            <p class="text-xs text-slate-400 mt-1 max-w-2xl">
+                Tamper-evident log of all authentication and authorization requests. Enforces accountability and assists forensic review of unauthorized attempts.
+            </p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button onclick="filterLogs('ALL')" class="log-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-white active" data-filter="ALL">All</button>
+            <button onclick="filterLogs('ALLOWED')" class="log-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-emerald-400 border border-emerald-900 hover:bg-slate-700" data-filter="ALLOWED">Allowed Only</button>
+            <button onclick="filterLogs('DENIED')" class="log-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-red-400 border border-red-900 hover:bg-slate-700" data-filter="DENIED">Denied (Alerts)</button>
+        </div>
+    </div>
+
+    {% if not has_perm %}
+    <!-- Educational Block Notice for Unauthorized Role -->
+    <div class="bg-slate-800 border-2 border-amber-600/60 rounded-xl p-8 text-center shadow-xl">
+        <div class="w-16 h-16 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-4 border border-amber-500/30 text-2xl">
+            <i class="fa-solid fa-user-lock"></i>
+        </div>
+        <h2 class="text-lg font-bold text-white mb-2">Restricted Security Resource: 403 Forbidden</h2>
+        <p class="text-xs text-slate-300 max-w-md mx-auto mb-4">
+            Under the <strong>Principle of Least Privilege</strong>, the security audit ledger is restricted to the 
+            <span class="text-red-400 font-bold">Admin</span> role. 
+            Role <span class="text-amber-300 font-bold">'{{ current_user.role.value }}'</span> is unauthorized to inspect forensic system logs.
+        </p>
+        <button onclick="quickSwitchRole('Admin')" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg transition">
+            <i class="fa-solid fa-crown mr-1.5"></i> Switch to Admin to View Audit Logs
+        </button>
+    </div>
+    {% else %}
+    <!-- Audit Logs Table (Admin Authorized) -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
+        <div class="px-5 py-3.5 bg-slate-900 border-b border-slate-700 flex items-center justify-between text-xs">
+            <span class="font-bold text-slate-300 uppercase tracking-wider">
+                Live Audit Entries ({{ logs|length }} recorded events)
+            </span>
+            <span class="text-emerald-400 font-semibold flex items-center">
+                <i class="fa-solid fa-circle text-[8px] animate-pulse mr-1.5"></i> Active Monitoring
+            </span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="bg-slate-900/60 text-slate-400 uppercase text-[11px] border-b border-slate-700">
+                        <th class="py-3 px-4">Event ID</th>
+                        <th class="py-3 px-4">Timestamp</th>
+                        <th class="py-3 px-4">Subject</th>
+                        <th class="py-3 px-4">Role</th>
+                        <th class="py-3 px-4">Action</th>
+                        <th class="py-3 px-4">Target Resource</th>
+                        <th class="py-3 px-4 text-center">Decision</th>
+                        <th class="py-3 px-4">Policy Reason</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-700/60 font-sans" id="audit-table-body">
+                    {% for log in logs %}
+                    <tr class="audit-row hover:bg-slate-750 transition" data-status="{{ log.status }}">
+                        <td class="py-3 px-4 font-mono text-slate-400 text-[11px]">{{ log.id }}</td>
+                        <td class="py-3 px-4 font-mono text-slate-300 whitespace-nowrap text-[11px]">{{ log.timestamp }}</td>
+                        <td class="py-3 px-4 font-bold text-white whitespace-nowrap">{{ log.username }}</td>
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold {% if log.role == 'Admin' %}bg-red-950 text-red-300 border border-red-800{% elif log.role == 'Teacher' %}bg-amber-950 text-amber-300 border border-amber-800{% elif log.role == 'Student' %}bg-emerald-950 text-emerald-300 border border-emerald-800{% else %}bg-slate-700 text-slate-300{% endif %}">
+                                {{ log.role }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 font-mono text-blue-400 whitespace-nowrap">{{ log.action }}</td>
+                        <td class="py-3 px-4 font-mono text-slate-300 whitespace-nowrap">{{ log.resource_id or '—' }}</td>
+                        <td class="py-3 px-4 text-center whitespace-nowrap">
+                            {% if log.status == 'ALLOWED' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">
+                                <i class="fa-solid fa-check text-[9px] mr-1"></i> ALLOWED
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-red-950 text-red-400 border border-red-800">
+                                <i class="fa-solid fa-ban text-[9px] mr-1"></i> DENIED
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4 text-slate-300 max-w-sm truncate text-[11px]" title="{{ log.reason }}">
+                            {{ log.reason }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

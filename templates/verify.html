@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Independent Verification - RBAC Simulator{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header Section -->
+    <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-xl font-black text-white flex items-center">
+                <i class="fa-solid fa-clipboard-check text-emerald-400 mr-2.5"></i>
+                Independent Permissions Matrix Verification Suite
+            </h1>
+            <p class="text-xs text-slate-400 mt-1 max-w-2xl">
+                Executes formal automated verification comparing the ground-truth access control matrix against actual runtime Policy Enforcement Point (PEP) and Policy Decision Point (PDP) decisions.
+            </p>
+        </div>
+        <button onclick="runVerificationSuite()" id="run-verify-btn" class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center space-x-2 transition">
+            <i class="fa-solid fa-play"></i>
+            <span>Execute Full Verification Test</span>
+        </button>
+    </div>
+
+    <!-- Verification Summary Metrics Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="metrics-cards">
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Test Cases</div>
+            <div class="text-2xl font-black text-white mt-1 font-mono" id="metric-total">18</div>
+            <div class="text-[10px] text-slate-400 mt-1">3 Roles &times; 6 Actions</div>
+        </div>
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <div class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Passed Tests</div>
+            <div class="text-2xl font-black text-emerald-400 mt-1 font-mono" id="metric-passed">18</div>
+            <div class="text-[10px] text-slate-400 mt-1">100% Policy Adherence</div>
+        </div>
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <div class="text-[11px] font-bold text-red-400 uppercase tracking-wider">Failed Tests</div>
+            <div class="text-2xl font-black text-slate-400 mt-1 font-mono" id="metric-failed">0</div>
+            <div class="text-[10px] text-slate-400 mt-1">Zero Discrepancies</div>
+        </div>
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <div class="text-[11px] font-bold text-blue-400 uppercase tracking-wider">Compliance Status</div>
+            <div class="text-sm font-black text-emerald-400 mt-2 flex items-center" id="metric-status">
+                <i class="fa-solid fa-circle-check mr-1.5 text-base"></i> FULLY VERIFIED
+            </div>
+            <div class="text-[10px] text-slate-400 mt-1">Least Privilege Enforced</div>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
+        <div class="px-5 py-3.5 bg-slate-900 border-b border-slate-700 flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                Exhaustive Test Execution Matrix
+            </span>
+            <span class="text-[11px] text-slate-400 font-mono">
+                PBL Activity 4 Independent Verification
+            </span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="bg-slate-900/60 text-slate-400 uppercase text-[11px] border-b border-slate-700">
+                        <th class="py-3 px-4">Subject Role</th>
+                        <th class="py-3 px-4">Evaluated Action</th>
+                        <th class="py-3 px-4 text-center">Expected Matrix</th>
+                        <th class="py-3 px-4 text-center">Actual PEP Result</th>
+                        <th class="py-3 px-4 text-center">Test Verdict</th>
+                        <th class="py-3 px-4">Security Decision Explanation</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-700/60 font-sans" id="verify-results-tbody">
+                    <!-- Populated dynamically via JS or auto-loaded on page load -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Run verification on initial load
+    document.addEventListener('DOMContentLoaded', () => {
+        runVerificationSuite();
+    });
+</script>
+{% endblock %}

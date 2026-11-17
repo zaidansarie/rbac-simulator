@@ -1,0 +1,4 @@
+# Role-Based Access Control (RBAC) Simulator Dependencies
+# Python 3.10+ required
+
+Flask>=3.0.0
