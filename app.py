@@ -16,8 +16,16 @@ from rbac.auth import AuthenticationService
 from rbac.database import Database
 from verify_rbac import PermissionsMatrixVerifier
 
-app = Flask(__name__)
-app.secret_key = "rbac-super-secret-cryptography-pbl-key-2024"
+import os
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, "templates"),
+    static_folder=os.path.join(BASE_DIR, "static")
+)
+app.secret_key = os.environ.get("SECRET_KEY", "rbac-super-secret-cryptography-pbl-key-2024")
 
 # Global Singletons
 db = Database()
