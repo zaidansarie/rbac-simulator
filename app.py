@@ -17,39 +17,14 @@ from rbac.database import Database
 from verify_rbac import PermissionsMatrixVerifier
 
 import os
-from jinja2 import ChoiceLoader, FileSystemLoader
 
-# Resolve template and static directories resiliently for local and Vercel serverless
-base_dir = os.path.abspath(os.path.dirname(__file__))
-cwd = os.getcwd()
-
-candidate_template_dirs = [
-    os.path.join(base_dir, "templates"),
-    os.path.join(cwd, "templates"),
-    os.path.join(cwd, "api", "templates"),
-    os.path.abspath(os.path.join(base_dir, "..", "templates")),
-]
-
-candidate_static_dirs = [
-    os.path.join(base_dir, "static"),
-    os.path.join(cwd, "static"),
-    os.path.join(cwd, "api", "static"),
-    os.path.abspath(os.path.join(base_dir, "..", "static")),
-]
-
-template_dir = next((d for d in candidate_template_dirs if os.path.isdir(d)), os.path.join(base_dir, "templates"))
-static_dir = next((d for d in candidate_static_dirs if os.path.isdir(d)), os.path.join(base_dir, "static"))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(
     __name__,
-    template_folder=template_dir,
-    static_folder=static_dir
+    template_folder=os.path.join(BASE_DIR, "templates"),
+    static_folder=os.path.join(BASE_DIR, "static")
 )
-
-existing_loaders = [FileSystemLoader(d) for d in candidate_template_dirs if os.path.isdir(d)]
-if existing_loaders:
-    app.jinja_loader = ChoiceLoader(existing_loaders)
-
 app.secret_key = os.environ.get("SECRET_KEY", "rbac-super-secret-cryptography-pbl-key-2024")
 
 # Global Singletons
