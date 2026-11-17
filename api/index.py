@@ -420,5 +420,8 @@ def api_reset():
     return jsonify({"success": True, "message": "Database reset to factory default records and users."})
 
 
+# Export both app and application for WSGI compatibility on Vercel
+application = app
+
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
