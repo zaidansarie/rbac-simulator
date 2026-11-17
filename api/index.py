@@ -23,6 +23,8 @@ from rbac.core import RBACEngine, AccessDeniedError
 from rbac.auth import AuthenticationService
 from rbac.database import Database
 from verify_rbac import PermissionsMatrixVerifier
+from embedded_assets import EMBEDDED_TEMPLATES, EMBEDDED_STATIC
+from jinja2 import ChoiceLoader, FileSystemLoader, DictLoader
 
 # Bulletproof template and static directory discovery
 template_candidates = [
@@ -47,6 +49,15 @@ app = Flask(
     static_folder=static_dir
 )
 app.secret_key = os.environ.get("SECRET_KEY", "rbac-super-secret-cryptography-pbl-key-2024")
+
+# Configure Jinja ChoiceLoader: checks disk first, seamlessly falls back to embedded strings
+loaders = []
+if os.path.isdir(template_dir):
+    loaders.append(FileSystemLoader(template_dir))
+if os.path.isdir(os.path.join(root_dir, "templates")):
+    loaders.append(FileSystemLoader(os.path.join(root_dir, "templates")))
+loaders.append(DictLoader(EMBEDDED_TEMPLATES))
+app.jinja_loader = ChoiceLoader(loaders)
 
 # Global Singletons
 db = Database()
@@ -92,8 +103,35 @@ def handle_exception(e):
 
 
 # ==========================================
-# Frontend Routes
+# Frontend Routes & Healthchecks
 # ==========================================
+
+@app.route("/ping")
+def ping():
+    """Healthcheck endpoint for monitoring serverless cold-start readiness."""
+    return jsonify({
+        "status": "healthy",
+        "current_dir": current_dir,
+        "users_count": len(db.users),
+        "records_count": len(db.records),
+        "embedded_templates": list(EMBEDDED_TEMPLATES.keys()),
+        "embedded_static": list(EMBEDDED_STATIC.keys())
+    })
+
+
+@app.route("/static/<path:filename>")
+def custom_static(filename):
+    """Resilient static file server with embedded fallback."""
+    file_path = os.path.join(static_dir, filename)
+    if os.path.isfile(file_path):
+        from flask import send_from_directory
+        return send_from_directory(static_dir, filename)
+    if filename in EMBEDDED_STATIC:
+        mimetype = "text/css" if filename.endswith(".css") else "application/javascript"
+        from flask import Response
+        return Response(EMBEDDED_STATIC[filename], mimetype=mimetype)
+    return "File not found", 404
+
 
 @app.route("/")
 def index():
