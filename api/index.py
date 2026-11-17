@@ -5,6 +5,8 @@ Self-contained module with templates, static assets, and RBAC policy enforcement
 
 import os
 import sys
+import secrets
+import traceback
 from typing import Optional
 from flask import Flask, render_template, request, jsonify, session
 
@@ -22,14 +24,22 @@ from rbac.auth import AuthenticationService
 from rbac.database import Database
 from verify_rbac import PermissionsMatrixVerifier
 
-# Resilient template and static directory discovery
-template_dir = os.path.join(current_dir, "templates")
-if not os.path.isdir(template_dir):
-    template_dir = os.path.join(root_dir, "templates")
+# Bulletproof template and static directory discovery
+template_candidates = [
+    os.path.join(current_dir, "templates"),
+    os.path.join(root_dir, "templates"),
+    os.path.abspath("templates"),
+    os.path.abspath("api/templates")
+]
+template_dir = next((d for d in template_candidates if os.path.isdir(d)), os.path.join(current_dir, "templates"))
 
-static_dir = os.path.join(current_dir, "static")
-if not os.path.isdir(static_dir):
-    static_dir = os.path.join(root_dir, "static")
+static_candidates = [
+    os.path.join(current_dir, "static"),
+    os.path.join(root_dir, "static"),
+    os.path.abspath("static"),
+    os.path.abspath("api/static")
+]
+static_dir = next((d for d in static_candidates if os.path.isdir(d)), os.path.join(current_dir, "static"))
 
 app = Flask(
     __name__,
@@ -45,12 +55,15 @@ auth_service = AuthenticationService()
 
 
 def get_current_user() -> Optional[User]:
-    """Helper to retrieve user from session."""
+    """Helper to retrieve user from session with fallback support for serverless."""
     token = session.get("session_token")
     if token:
         user = auth_service.get_user_from_session(token, db.users)
         if user:
             return user
+    username = session.get("username")
+    if username and username in db.users:
+        return db.users[username]
     return None
 
 
@@ -65,6 +78,19 @@ def inject_user_context():
     }
 
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Graceful error handler to return diagnostic info instead of crashing the function."""
+    app.logger.error("Unhandled Exception: %s\n%s", str(e), traceback.format_exc())
+    if request.path.startswith("/api/"):
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
+    return f"<h1>500 Internal Error</h1><p>{str(e)}</p><pre>{traceback.format_exc()}</pre>", 500
+
+
 # ==========================================
 # Frontend Routes
 # ==========================================
@@ -73,10 +99,14 @@ def inject_user_context():
 def index():
     user = get_current_user()
     if not user:
-        # Default auto-login as Admin for seamless exploration
-        _, _, token, u = auth_service.authenticate("admin", db.DEFAULT_PASSWORDS["admin"], db.users)
-        session["session_token"] = token
-        user = u
+        # Default auto-login as Admin with zero PBKDF2 compute overhead
+        admin_user = db.users.get("admin")
+        if admin_user:
+            token = secrets.token_hex(24)
+            auth_service.active_sessions[token] = "admin"
+            session["session_token"] = token
+            session["username"] = "admin"
+            user = admin_user
 
     records = db.list_records()
     return render_template("index.html", records=records, active_page="dashboard")
@@ -127,6 +157,7 @@ def api_login():
 
     if success:
         session["session_token"] = token
+        session["username"] = user.username
         db.log_audit(
             username=user.username,
             role=user.role.value,
@@ -160,7 +191,8 @@ def api_logout():
     token = session.get("session_token")
     if token:
         auth_service.logout(token)
-        session.pop("session_token", None)
+    session.pop("session_token", None)
+    session.pop("username", None)
     return jsonify({"success": True, "message": "Logged out successfully."})
 
 
@@ -423,5 +455,3 @@ def api_reset():
 # Export both app and application for WSGI compatibility on Vercel
 application = app
 
-if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
